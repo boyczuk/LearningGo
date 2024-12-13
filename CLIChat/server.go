@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	// Create server
 	listener, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
 		fmt.Println(err)
@@ -22,6 +23,7 @@ func main() {
 		// defer conn.Close()
 		fmt.Println("Client connected!")
 
+		// Go routine
 		go handleClient(conn)
 
 		// buffer := make([]byte, 1024)
@@ -38,17 +40,28 @@ func main() {
 }
 
 func handleClient(conn net.Conn) {
+	// Close connections once done
 	defer conn.Close()
+	// Create buffer to store input
 	buffer := make([]byte, 1024)
+	n, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println("Error reading user's name:", err)
+		return
+	}
+	name := string(buffer[:n])
+	fmt.Printf("New client connected: %s\n", name)
 
 	for {
+		// Read the information sent from the client into the buffer
 		n, err := conn.Read(buffer)
 		if err != nil {
-			fmt.Println("Error reading from client or client disconnected:", err)
+			fmt.Printf("User %s disconnected:\n", name)
 			return
 		}
 
+		// convert slice buffer into string and print
 		message := string(buffer[:n])
-		fmt.Println(message)
+		fmt.Printf("%s: %s\n", name, message)
 	}
 }
