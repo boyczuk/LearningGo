@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -15,11 +17,17 @@ func main() {
 	defer conn.Close()
 	fmt.Println("Connected to server!")
 
-	message := "Hello, server!\n"
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		fmt.Println("Error sending data:", err)
-		return
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Print("> ")
+		input, _ := reader.ReadString('\n')
+		message := strings.TrimSpace(input)
+		_, err = conn.Write([]byte(message))
+		if err != nil {
+			fmt.Println("Error sending data:", err)
+			return
+		}
+		fmt.Println("Message sent to server.")
 	}
-	fmt.Println("Message sent to server.")
 }
