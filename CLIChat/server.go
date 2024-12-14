@@ -3,7 +3,11 @@ package main
 import (
 	"fmt"
 	"net"
+	"sync"
 )
+
+var clients = make(map[net.Conn]string)
+var mutex = &sync.Mutex{}
 
 func main() {
 	// Create server
@@ -14,34 +18,29 @@ func main() {
 	}
 	defer listener.Close()
 	fmt.Println("Server is listening on port 8080...")
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection:", err)
 			return
 		}
-		// defer conn.Close()
-		fmt.Println("Client connected!")
 
 		// Go routine
 		go handleClient(conn)
-
-		// buffer := make([]byte, 1024)
-		// n, err := conn.Read(buffer)
-		// if err != nil {
-		// 	fmt.Println("Error reading from client:", err)
-		// 	return
-		// }
-
-		// message := string(buffer[:n])
-		// fmt.Println(message)
 	}
 
 }
 
 func handleClient(conn net.Conn) {
-	// Close connections once done
-	defer conn.Close()
+	// Remove clients from client map and close connection on function end
+	defer func() {
+		mutex.Lock()
+		delete(clients, conn)
+		mutex.Unlock()
+		conn.Close()
+	}()
+
 	// Create buffer to store input
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
@@ -51,6 +50,10 @@ func handleClient(conn net.Conn) {
 	}
 	name := string(buffer[:n])
 	fmt.Printf("New client connected: %s\n", name)
+
+	mutex.Lock()
+	clients[conn] = name
+	mutex.Unlock()
 
 	for {
 		// Read the information sent from the client into the buffer
@@ -63,5 +66,21 @@ func handleClient(conn net.Conn) {
 		// convert slice buffer into string and print
 		message := string(buffer[:n])
 		fmt.Printf("%s: %s\n", name, message)
+
+		// Convert to message, send name of connected client
+		broadcastMessage(fmt.Sprintf("%s: %s", name, message), conn)
+	}
+}
+
+func broadcastMessage(message string, sender net.Conn) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	for conn := range clients {
+		if conn != sender {
+			_, err := conn.Write([]byte(message))
+			if err != nil {
+				fmt.Println("Error sending message to client:", err)
+			}
+		}
 	}
 }

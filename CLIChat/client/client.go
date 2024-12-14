@@ -29,6 +29,20 @@ func main() {
 	}
 	fmt.Printf("Welcome, %s! Type and press enter to sent messages\n", name)
 
+	// Go routine runs while waiting for user input
+	go func() {
+		buffer := make([]byte, 1024)
+		for {
+			n, err := conn.Read(buffer)
+			if err != nil {
+				fmt.Println("Error occured while reading from server: ", err)
+				return
+			}
+			message := string(buffer[:n])
+			fmt.Printf("\r%s\n> ", message)
+		}
+	}()
+
 	for {
 		fmt.Print("> ")
 		input, _ := reader.ReadString('\n')
@@ -39,6 +53,6 @@ func main() {
 			fmt.Println("Error sending data:", err)
 			return
 		}
-		fmt.Println("Message sent to server.")
+
 	}
 }
